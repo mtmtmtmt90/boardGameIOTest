@@ -1,15 +1,45 @@
 import {Client} from 'boardgame.io/client';
 import { Example } from './Game';
 import { SocketIO } from 'boardgame.io/multiplayer';
+// import { resolve } from 'parcel-bundler/lib/utils/localRequire';
 
+
+function getUser(rootElement) {
+  return new Promise(resolve => {
+    const CreateButton = (playerID) => {
+      const button = document.createElement('button');
+      button.textContent = 'Player ' + playerID;
+      button.onclick = () => resolve(playerID);
+      rootElement.append(button);
+    } 
+    rootElement.innerHTML = `<p> Choose Player </p>`;
+    const playerIDs = ['0', '1'];
+    playerIDs.forEach(CreateButton);
+  })
+}
 class ExampleClient {
-    constructor(rootElement, { playerID } = {}) {
-        this.client = Client({ game: Example, multiplayer: SocketIO({ server: 'localhost:8000' }), playerID });
-        this.client.start();
+    constructor(rootElement, { playerID } = {} ) {
+      this.client = Client({ game: Example, multiplayer: SocketIO({ server: 'localhost:8000' }), playerID });
+      this.connected = false;  
+      this.client.start();
         this.rootElement = rootElement;
-        this.createBoard();
-        this.attachListeners();
         this.client.subscribe(state => this.update(state));
+    }
+
+    onConnecting () {
+      this.connected = false;
+      this.showConnecting();
+    }
+
+    onConnected () {
+      this.connected = true;
+      this.createBoard();
+        this.attachListeners();
+        
+    }
+
+    showConnecting () {
+      this.rootElement.innerHTML = '<p> Connecting ... </p>';
     }
 
     createBoard() {
@@ -34,7 +64,7 @@ class ExampleClient {
 
     attachListeners() {
           const handleCellClick = event => {
-            console.log(event.target);
+            
             const id = parseInt(event.target.dataset.id);
             this.client.moves.clickCell(id);
             // event.target.innerHTML = this.client.ctx.currentPlayer
@@ -47,10 +77,15 @@ class ExampleClient {
     }
 
     update(state) {
-      if (state === null) return;
+      if (state === null) {
+        this.onConnecting();
+        return;
+      } else if (!this.connected) {
+        this.onConnected();
+      };
       const cells = document.querySelectorAll('.cell');
       cells.forEach(cell => {
-        console.log(cell)
+        
         const cellId = parseInt(cell.dataset.id);
         const cellValue = state.G.cells[cellId];
         cell.textContent = cellValue !== null ? cellValue : '';
@@ -67,7 +102,12 @@ class ExampleClient {
     }
 }
 
+class App {
+  constructor (rootElement) {
+    this.client = getUser(rootElement).then((playerID) => {
+      return new ExampleClient(rootElement, { playerID });
+    })
+  }
+}
 const appElement = document.getElementById('app');
-const playerID = 1;
-
-const app = new ExampleClient(appElement, { playerID });
+new App(appElement);
