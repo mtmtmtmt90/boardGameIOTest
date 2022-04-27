@@ -18,8 +18,9 @@ function getUser(rootElement) {
   })
 }
 class ExampleClient {
-    constructor(rootElement, { playerID } = {} ) {
-      this.client = Client({ game: Example, multiplayer: SocketIO({ server: 'localhost:8000' }), playerID });
+    constructor(rootElement, { playerID, matchID = 'some' } = {} ) {
+      this.client = Client({ game: Example, multiplayer: SocketIO({ server: 'localhost:8000' }), playerID, matchID });
+      console.log(this.client);
       this.connected = false;  
       this.client.start();
         this.rootElement = rootElement;
@@ -27,15 +28,17 @@ class ExampleClient {
     }
 
     onConnecting () {
-      this.connected = false;
       this.showConnecting();
     }
 
-    onConnected () {
+    onWait () {
       this.connected = true;
+      this.rootElement.innerHTML = '<p> Waiting to second player... </p>';
+    }
+
+    onConnected() {
       this.createBoard();
         this.attachListeners();
-        
     }
 
     showConnecting () {
@@ -80,9 +83,14 @@ class ExampleClient {
       if (state === null) {
         this.onConnecting();
         return;
-      } else if (!this.connected) {
+      } else if ((!this.client.matchData[0].isConnected) || (!this.client.matchData[1].isConnected)) {
+        this.onWait();
+        return;
+      } else if (this.connected) {
         this.onConnected();
       };
+
+      
       const cells = document.querySelectorAll('.cell');
       cells.forEach(cell => {
         

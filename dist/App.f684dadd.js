@@ -28295,15 +28295,18 @@ function getUser(rootElement) {
 class ExampleClient {
   constructor(rootElement) {
     let {
-      playerID
+      playerID,
+      matchID = 'some'
     } = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     this.client = (0, _client.Client)({
       game: _Game.Example,
       multiplayer: (0, _multiplayer.SocketIO)({
         server: 'localhost:8000'
       }),
-      playerID
+      playerID,
+      matchID
     });
+    console.log(this.client);
     this.connected = false;
     this.client.start();
     this.rootElement = rootElement;
@@ -28311,12 +28314,15 @@ class ExampleClient {
   }
 
   onConnecting() {
-    this.connected = false;
     this.showConnecting();
   }
 
-  onConnected() {
+  onWait() {
     this.connected = true;
+    this.rootElement.innerHTML = '<p> Waiting to second player... </p>';
+  }
+
+  onConnected() {
     this.createBoard();
     this.attachListeners();
   }
@@ -28362,7 +28368,10 @@ class ExampleClient {
     if (state === null) {
       this.onConnecting();
       return;
-    } else if (!this.connected) {
+    } else if (!this.client.matchData[0].isConnected || !this.client.matchData[1].isConnected) {
+      this.onWait();
+      return;
+    } else if (this.connected) {
       this.onConnected();
     }
 
@@ -28425,7 +28434,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "37747" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "38803" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
